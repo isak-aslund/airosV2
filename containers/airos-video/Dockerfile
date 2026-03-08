@@ -15,7 +15,7 @@ RUN wget -qO- \
 # ---------------------------------------------------------------------------
 # Stage 2 – runtime image
 # ---------------------------------------------------------------------------
-FROM nvcr.io/nvidia/l4t-base:r36.4.0 AS runtime
+FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS runtime
 
 ARG MEDIAMTX_VERSION
 ARG S6_OVERLAY_VERSION=3.2.0.2

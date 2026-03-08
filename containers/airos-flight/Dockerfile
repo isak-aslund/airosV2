@@ -5,7 +5,7 @@
 # ---------------------------------------------------------------------------
 # Stage 1 - Build mavlink-router from source
 # ---------------------------------------------------------------------------
-FROM nvcr.io/nvidia/l4t-base:r36.4.0 AS mavlink-router-builder
+FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS mavlink-router-builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
@@ -29,7 +29,7 @@ RUN git clone https://github.com/mavlink-router/mavlink-router.git /tmp/mavlink-
 # ---------------------------------------------------------------------------
 # Stage 2 - Build ACC (Airolit Component Controller)
 # ---------------------------------------------------------------------------
-FROM nvcr.io/nvidia/l4t-base:r36.4.0 AS acc-builder
+FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS acc-builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
@@ -86,7 +86,7 @@ RUN BUSIO=/opt/acc/.venv/lib/python3.10/site-packages/busio.py \
 # ---------------------------------------------------------------------------
 # Stage 3 - Build nmea_over_udp
 # ---------------------------------------------------------------------------
-FROM nvcr.io/nvidia/l4t-base:r36.4.0 AS nmea-builder
+FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS nmea-builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
@@ -108,7 +108,7 @@ RUN git clone https://github.com/Airolit/nmea_over_udp.git /opt/nmea \
 # ---------------------------------------------------------------------------
 # Stage 4 - Build mavlink_logger
 # ---------------------------------------------------------------------------
-FROM nvcr.io/nvidia/l4t-base:r36.4.0 AS mavlink-logger-builder
+FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS mavlink-logger-builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
@@ -130,7 +130,7 @@ RUN git clone https://github.com/Airolit/mavlink_logger.git /opt/mavlink-logger 
 # ---------------------------------------------------------------------------
 # Stage 5 - Build mavlink_sender
 # ---------------------------------------------------------------------------
-FROM nvcr.io/nvidia/l4t-base:r36.4.0 AS mavlink-sender-builder
+FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS mavlink-sender-builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
@@ -152,7 +152,7 @@ RUN git clone https://github.com/Airolit/mavlink_sender.git /opt/mavlink-sender 
 # ---------------------------------------------------------------------------
 # Stage 6 - Runtime image
 # ---------------------------------------------------------------------------
-FROM nvcr.io/nvidia/l4t-base:r36.4.0 AS runtime
+FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS runtime
 
 ARG S6_OVERLAY_VERSION=3.2.0.2
 
