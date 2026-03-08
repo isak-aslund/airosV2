@@ -9,7 +9,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from pathlib import Path
+
 from routers import logs, network, status, update
+
+APP_DIR = Path(__file__).resolve().parent
 
 logging.basicConfig(
     level=logging.INFO,
@@ -61,13 +65,15 @@ app.include_router(network.router)
 app.include_router(logs.router)
 
 # Static files
-app.mount("/static", StaticFiles(directory="/app/static"), name="static")
+_static_dir = APP_DIR / "static"
+if _static_dir.is_dir():
+    app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
 
 @app.get("/")
 async def index():
     """Serve the management UI."""
-    return FileResponse("/app/templates/index.html")
+    return FileResponse(str(APP_DIR / "templates" / "index.html"))
 
 
 @app.get("/health")
