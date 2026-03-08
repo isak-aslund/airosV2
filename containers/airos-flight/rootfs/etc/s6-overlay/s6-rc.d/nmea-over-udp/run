@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+
+cd /opt/nmea
+exec /opt/nmea/.venv/bin/python -u run.py

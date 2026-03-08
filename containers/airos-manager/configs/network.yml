@@ -1,0 +1,11 @@
+version: 1
+connections:
+  - name: eth-dual-ip
+    interface: enP8p1s0
+    type: ethernet
+    ipv4:
+      method: manual
+      addresses:
+        - 192.168.144.111/24
+        - 10.223.0.111/16
+      gateway: 192.168.144.78

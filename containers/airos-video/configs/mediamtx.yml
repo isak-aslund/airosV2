@@ -1,0 +1,14 @@
+logLevel: info
+logDestinations: [stdout]
+
+api: yes
+apiAddress: :9997
+
+protocols: [udp, tcp]
+rtspAddress: :8554
+
+paths:
+  live0:
+    source: publisher
+  fpv:
+    source: publisher

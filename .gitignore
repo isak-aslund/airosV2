@@ -1,0 +1,31 @@
+# Reference repos (not part of this project)
+airos/
+Airolit_Component_Controller/
+
+# Build outputs
+out/
+*.tar.gz
+*.tar
+
+# Docker
+.docker/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Update artifacts
+*.zip.tmp

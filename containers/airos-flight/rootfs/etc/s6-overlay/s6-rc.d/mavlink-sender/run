@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+
+cd /opt/mavlink-sender
+exec /opt/mavlink-sender/.venv/bin/python -u run.py

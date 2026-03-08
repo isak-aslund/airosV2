@@ -1,0 +1,7 @@
+[Unit]
+Description=AirOS Manager Watchdog
+After=airos-compose.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/airos-watchdog.sh

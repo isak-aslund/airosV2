@@ -1,0 +1,9 @@
+[Unit]
+Description=AirOS Manager Watchdog Timer
+
+[Timer]
+OnBootSec=120
+OnUnitActiveSec=60
+
+[Install]
+WantedBy=timers.target

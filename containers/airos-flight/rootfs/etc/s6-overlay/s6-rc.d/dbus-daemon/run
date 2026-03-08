@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+
+mkdir -p /run/dbus
+exec dbus-daemon --system --nofork --nopidfile --address=unix:path=/run/dbus/system_bus_socket

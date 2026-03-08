@@ -1,0 +1,11 @@
+# Airolit Camera udev rules
+# Create persistent device symlinks for cameras
+
+# AR0234 camera
+SUBSYSTEM=="video4linux", KERNEL=="video*", ATTR{name}=="*ar0234*", SYMLINK+="ar0234"
+
+# E-CON IMX678 camera
+SUBSYSTEM=="video4linux", KERNEL=="video*", ATTR{name}=="*e-con*", SYMLINK+="imx678_econ"
+
+# FRAMOS IMX678 camera
+SUBSYSTEM=="video4linux", KERNEL=="video*", ATTR{name}=="*imx678*", SYMLINK+="imx678_framos"

@@ -1,0 +1,4 @@
+#!/bin/bash
+set -euo pipefail
+
+exec mavlink-routerd -c /etc/mavlink-router/mavlink-router.conf

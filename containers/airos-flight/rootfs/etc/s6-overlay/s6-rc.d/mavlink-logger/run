@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+
+cd /opt/mavlink-logger
+exec /opt/mavlink-logger/.venv/bin/python -u run.py

@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+
+cd /opt/acc
+exec /opt/acc/.venv/bin/python -u src/fc_main.py --device="udpin:127.0.0.1:11100"

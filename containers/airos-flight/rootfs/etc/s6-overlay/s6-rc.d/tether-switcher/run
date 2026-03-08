@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+
+cd /opt/acc
+exec /opt/acc/.venv/bin/python -u src/tether_switcher_main.py

@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AirOS Manager</title>
+<style>
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg-dark: #1a1a2e;
+  --bg-card: #16213e;
+  --accent: #0f3460;
+  --text: #e0e0e0;
+  --text-dim: #8890a0;
+  --green: #00c853;
+  --red: #ff1744;
+  --yellow: #ffd600;
+  --border: #2a2a4a;
+  --mono: "Courier New", Courier, monospace;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg-dark);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* Header */
+.header {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.hostname {
+  font-family: var(--mono);
+  color: var(--text-dim);
+}
+
+.conn-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.conn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+.conn-dot.ok {
+  background: var(--green);
+}
+
+/* Main layout */
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  display: grid;
+  gap: 24px;
+}
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.card h2 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* System info grid */
+.sys-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.sys-item {
+  background: var(--bg-dark);
+  border-radius: 6px;
+  padding: 14px;
+}
+
+.sys-item .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.sys-item .value {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sys-item .value.warn {
+  color: var(--yellow);
+}
+
+.sys-item .value.crit {
+  color: var(--red);
+}
+
+/* Services table */
+.services-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.services-table th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.services-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.services-table tr:last-child td {
+  border-bottom: none;
+}
+
+.services-table .name {
+  font-weight: 600;
+}
+
+.services-table .version {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.status-badge.healthy,
+.status-badge.running {
+  background: rgba(0, 200, 83, 0.15);
+  color: var(--green);
+}
+
+.status-badge.starting,
+.status-badge.none {
+  background: rgba(255, 214, 0, 0.15);
+  color: var(--yellow);
+}
+
+.status-badge.unhealthy,
+.status-badge.stopped,
+.status-badge.exited,
+.status-badge.dead {
+  background: rgba(255, 23, 68, 0.15);
+  color: var(--red);
+}
+
+.btn {
+  background: var(--accent);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s;
+}
+
+.btn:hover {
+  background: #1a4a80;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Update section */
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  margin-bottom: 16px;
+}
+
+.upload-zone:hover,
+.upload-zone.dragover {
+  border-color: var(--accent);
+  background: rgba(15, 52, 96, 0.2);
+}
+
+.upload-zone p {
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+.upload-zone .hint {
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.upload-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.upload-controls .filename {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-dark);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  display: none;
+}
+
+.progress-bar .fill {
+  height: 100%;
+  background: var(--accent);
+  width: 0%;
+  transition: width 0.3s;
+}
+
+.progress-bar.active {
+  display: block;
+}
+
+.update-status {
+  font-size: 13px;
+  color: var(--text-dim);
+  min-height: 20px;
+}
+
+.update-status.error {
+  color: var(--red);
+}
+
+.update-status.success {
+  color: var(--green);
+}
+
+.last-update {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* Network section */
+.net-connections {
+  display: grid;
+  gap: 12px;
+}
+
+.net-conn {
+  background: var(--bg-dark);
+  border-radius: 6px;
+  padding: 14px;
+}
+
+.net-conn .conn-name {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.net-conn .conn-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+  font-size: 13px;
+}
+
+.net-conn .conn-details .label {
+  color: var(--text-dim);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.net-conn .conn-details .val {
+  font-family: var(--mono);
+}
+
+/* Empty state */
+.empty {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .header {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+  .sys-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .services-table {
+    font-size: 13px;
+  }
+  .services-table th:nth-child(4),
+  .services-table td:nth-child(4) {
+    display: none;
+  }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <h1>AirOS Manager</h1>
+  <div class="header-info">
+    <span class="hostname" id="hostname">--</span>
+    <div class="conn-status">
+      <div class="conn-dot" id="connDot"></div>
+      <span id="connLabel">Disconnected</span>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- System Info -->
+  <section class="card" id="systemCard">
+    <h2>System</h2>
+    <div class="sys-grid">
+      <div class="sys-item">
+        <div class="label">Base OS Version</div>
+        <div class="value" id="baseVersion">--</div>
+      </div>
+      <div class="sys-item">
+        <div class="label">Uptime</div>
+        <div class="value" id="uptime">--</div>
+      </div>
+      <div class="sys-item">
+        <div class="label">Disk Usage</div>
+        <div class="value" id="disk">--</div>
+      </div>
+      <div class="sys-item">
+        <div class="label">Memory Usage</div>
+        <div class="value" id="memory">--</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Services -->
+  <section class="card" id="servicesCard">
+    <h2>Services</h2>
+    <table class="services-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Version</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="servicesBody">
+        <tr><td colspan="5" class="empty">Loading...</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Update -->
+  <section class="card" id="updateCard">
+    <h2>Update</h2>
+    <div class="upload-zone" id="dropZone">
+      <p>Drop update .zip here or click to select</p>
+      <p class="hint">Accepts .zip update bundles with manifest.json</p>
+    </div>
+    <input type="file" id="fileInput" accept=".zip" hidden>
+    <div class="upload-controls" id="uploadControls" style="display:none">
+      <span class="filename" id="fileName"></span>
+      <button class="btn" id="uploadBtn" onclick="doUpload()">Upload &amp; Apply</button>
+      <button class="btn" onclick="clearFile()">Clear</button>
+    </div>
+    <div class="progress-bar" id="progressBar">
+      <div class="fill" id="progressFill"></div>
+    </div>
+    <div class="update-status" id="updateStatus"></div>
+    <div class="last-update" id="lastUpdate"></div>
+  </section>
+
+  <!-- Network -->
+  <section class="card" id="networkCard">
+    <h2>Network</h2>
+    <div class="net-connections" id="netConnections">
+      <div class="empty">Loading...</div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function() {
+  "use strict";
+
+  var pollTimer = null;
+  var selectedFile = null;
+
+  // -- DOM refs --
+  var hostname = document.getElementById("hostname");
+  var connDot = document.getElementById("connDot");
+  var connLabel = document.getElementById("connLabel");
+  var baseVersion = document.getElementById("baseVersion");
+  var uptime = document.getElementById("uptime");
+  var disk = document.getElementById("disk");
+  var memory = document.getElementById("memory");
+  var servicesBody = document.getElementById("servicesBody");
+  var dropZone = document.getElementById("dropZone");
+  var fileInput = document.getElementById("fileInput");
+  var uploadControls = document.getElementById("uploadControls");
+  var fileNameEl = document.getElementById("fileName");
+  var progressBar = document.getElementById("progressBar");
+  var progressFill = document.getElementById("progressFill");
+  var updateStatus = document.getElementById("updateStatus");
+  var lastUpdate = document.getElementById("lastUpdate");
+  var netConnections = document.getElementById("netConnections");
+
+  // -- Fetch status --
+  function fetchStatus() {
+    fetch("/api/v1/status")
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        connDot.className = "conn-dot ok";
+        connLabel.textContent = "Connected";
+        renderSystem(data.system);
+        renderContainers(data.containers);
+        renderNetwork(data.network);
+      })
+      .catch(function() {
+        connDot.className = "conn-dot";
+        connLabel.textContent = "Disconnected";
+      });
+  }
+
+  function renderSystem(sys) {
+    if (!sys) return;
+    hostname.textContent = sys.hostname || "--";
+    baseVersion.textContent = sys.base_version || "N/A";
+    uptime.textContent = sys.uptime || "--";
+
+    var d = sys.disk || {};
+    var diskPct = d.percent || 0;
+    disk.textContent = diskPct + "%";
+    disk.className = "value" + (diskPct > 90 ? " crit" : diskPct > 75 ? " warn" : "");
+
+    var m = sys.memory || {};
+    var memPct = m.percent || 0;
+    memory.textContent = memPct + "%";
+    memory.className = "value" + (memPct > 90 ? " crit" : memPct > 75 ? " warn" : "");
+  }
+
+  function renderContainers(containers) {
+    if (!containers || containers.length === 0) {
+      servicesBody.innerHTML = '<tr><td colspan="5" class="empty">No containers found</td></tr>';
+      return;
+    }
+
+    var html = "";
+    containers.sort(function(a, b) { return a.name.localeCompare(b.name); });
+
+    for (var i = 0; i < containers.length; i++) {
+      var c = containers[i];
+      var statusClass = getStatusClass(c.status, c.health);
+      var statusText = c.health !== "none" ? c.health : c.status;
+      var created = c.created ? formatDate(c.created) : "--";
+
+      html += '<tr>' +
+        '<td class="name">' + esc(c.name) + '</td>' +
+        '<td class="version">' + esc(c.version) + '</td>' +
+        '<td><span class="status-badge ' + statusClass + '">' + esc(statusText) + '</span></td>' +
+        '<td style="font-size:12px;color:var(--text-dim)">' + esc(created) + '</td>' +
+        '<td><button class="btn" onclick="restartContainer(\'' + esc(c.name) + '\')">Restart</button></td>' +
+        '</tr>';
+    }
+    servicesBody.innerHTML = html;
+  }
+
+  function getStatusClass(status, health) {
+    if (health === "healthy") return "healthy";
+    if (health === "starting") return "starting";
+    if (health === "unhealthy") return "unhealthy";
+    if (status === "running") return "running";
+    if (status === "exited" || status === "dead") return "stopped";
+    return "none";
+  }
+
+  function renderNetwork(net) {
+    if (!net || !net.connections || net.connections.length === 0) {
+      netConnections.innerHTML = '<div class="empty">No network configuration</div>';
+      return;
+    }
+
+    var html = "";
+    for (var i = 0; i < net.connections.length; i++) {
+      var conn = net.connections[i];
+      var ipv4 = conn.ipv4 || {};
+      var addrs = (ipv4.addresses || []).join(", ");
+      var gw = ipv4.gateway || "none";
+
+      html += '<div class="net-conn">' +
+        '<div class="conn-name">' + esc(conn.name) + '</div>' +
+        '<div class="conn-details">' +
+          '<div><div class="label">Interface</div><div class="val">' + esc(conn.interface) + '</div></div>' +
+          '<div><div class="label">Addresses</div><div class="val">' + esc(addrs) + '</div></div>' +
+          '<div><div class="label">Gateway</div><div class="val">' + esc(gw) + '</div></div>' +
+        '</div></div>';
+    }
+    netConnections.innerHTML = html;
+  }
+
+  // -- Container restart --
+  window.restartContainer = function(name) {
+    if (!confirm("Restart container: " + name + "?")) return;
+    // Use docker API via our logs endpoint as a proxy - for now just refetch
+    // A proper restart endpoint could be added; for now the compose_up handles restarts
+    fetch("/api/v1/status").then(function() { fetchStatus(); });
+  };
+
+  // -- File upload --
+  dropZone.addEventListener("click", function() { fileInput.click(); });
+
+  dropZone.addEventListener("dragover", function(e) {
+    e.preventDefault();
+    dropZone.classList.add("dragover");
+  });
+
+  dropZone.addEventListener("dragleave", function() {
+    dropZone.classList.remove("dragover");
+  });
+
+  dropZone.addEventListener("drop", function(e) {
+    e.preventDefault();
+    dropZone.classList.remove("dragover");
+    if (e.dataTransfer.files.length > 0) {
+      selectFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  fileInput.addEventListener("change", function() {
+    if (fileInput.files.length > 0) {
+      selectFile(fileInput.files[0]);
+    }
+  });
+
+  function selectFile(f) {
+    if (!f.name.endsWith(".zip")) {
+      updateStatus.textContent = "Only .zip files are accepted";
+      updateStatus.className = "update-status error";
+      return;
+    }
+    selectedFile = f;
+    fileNameEl.textContent = f.name + " (" + formatBytes(f.size) + ")";
+    uploadControls.style.display = "flex";
+    updateStatus.textContent = "";
+    updateStatus.className = "update-status";
+  }
+
+  window.clearFile = function() {
+    selectedFile = null;
+    fileInput.value = "";
+    uploadControls.style.display = "none";
+    updateStatus.textContent = "";
+    updateStatus.className = "update-status";
+    progressBar.classList.remove("active");
+  };
+
+  window.doUpload = function() {
+    if (!selectedFile) return;
+
+    var btn = document.getElementById("uploadBtn");
+    btn.disabled = true;
+    progressBar.classList.add("active");
+    progressFill.style.width = "0%";
+    updateStatus.textContent = "Uploading...";
+    updateStatus.className = "update-status";
+
+    var formData = new FormData();
+    formData.append("file", selectedFile);
+
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/v1/update");
+
+    xhr.upload.onprogress = function(e) {
+      if (e.lengthComputable) {
+        var pct = Math.round((e.loaded / e.total) * 100);
+        progressFill.style.width = pct + "%";
+        if (pct >= 100) {
+          updateStatus.textContent = "Processing update...";
+        }
+      }
+    };
+
+    xhr.onload = function() {
+      btn.disabled = false;
+      progressFill.style.width = "100%";
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        var resp = JSON.parse(xhr.responseText);
+        updateStatus.textContent = "Update successful - version " + (resp.version || "unknown");
+        updateStatus.className = "update-status success";
+        fetchStatus();
+        fetchHistory();
+      } else {
+        var err = "Update failed";
+        try {
+          var detail = JSON.parse(xhr.responseText).detail;
+          if (typeof detail === "object") {
+            err = detail.message || err;
+            if (detail.errors) err += ": " + detail.errors.join("; ");
+          } else if (typeof detail === "string") {
+            err = detail;
+          }
+        } catch(e) {}
+        updateStatus.textContent = err;
+        updateStatus.className = "update-status error";
+      }
+    };
+
+    xhr.onerror = function() {
+      btn.disabled = false;
+      updateStatus.textContent = "Upload failed - network error";
+      updateStatus.className = "update-status error";
+    };
+
+    xhr.send(formData);
+  };
+
+  // -- Update history --
+  function fetchHistory() {
+    fetch("/api/v1/update/history")
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var h = data.history;
+        if (h && h.length > 0) {
+          var last = h[h.length - 1];
+          var ts = last.timestamp ? formatDate(last.timestamp) : "unknown";
+          lastUpdate.textContent = "Last update: v" + (last.version || "?") +
+            " (" + last.status + ") at " + ts;
+        }
+      })
+      .catch(function() {});
+  }
+
+  // -- Helpers --
+  function esc(s) {
+    if (!s) return "";
+    var d = document.createElement("div");
+    d.appendChild(document.createTextNode(s));
+    return d.innerHTML;
+  }
+
+  function formatDate(iso) {
+    try {
+      var d = new Date(iso);
+      return d.toLocaleDateString() + " " + d.toLocaleTimeString();
+    } catch(e) {
+      return iso;
+    }
+  }
+
+  function formatBytes(b) {
+    if (b < 1024) return b + " B";
+    if (b < 1048576) return (b / 1024).toFixed(1) + " KB";
+    return (b / 1048576).toFixed(1) + " MB";
+  }
+
+  // -- Init --
+  fetchStatus();
+  fetchHistory();
+  pollTimer = setInterval(fetchStatus, 5000);
+})();
+</script>
+</body>
+</html>

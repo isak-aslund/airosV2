@@ -1,0 +1,17 @@
+[Unit]
+Description=AirOS Docker Compose Stack
+Requires=docker.service
+After=docker.service network-online.target nvargus-daemon.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/etc/airos
+ExecStartPre=/usr/bin/docker compose --env-file /etc/airos/versions.env pull --ignore-pull-failures
+ExecStart=/usr/bin/docker compose --env-file /etc/airos/versions.env up -d --remove-orphans
+ExecStop=/usr/bin/docker compose --env-file /etc/airos/versions.env down
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target

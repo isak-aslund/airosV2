@@ -1,0 +1,77 @@
+services:
+  airos-video:
+    image: airos-video:${AIROS_VIDEO_VERSION:-latest}
+    runtime: nvidia
+    restart: unless-stopped
+    environment:
+      - ENABLE_AR0234=${ENABLE_AR0234:-true}
+    devices:
+      - /dev/ar0234:/dev/ar0234
+      - /dev/imx678_econ:/dev/imx678_econ
+    volumes:
+      - /tmp/argus_socket:/tmp/argus_socket
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget -qO- http://localhost:9997/v3/paths/list || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  airos-flight:
+    image: airos-flight:${AIROS_FLIGHT_VERSION:-latest}
+    restart: unless-stopped
+    devices:
+      - /dev/ttyTHS1:/dev/ttyTHS1
+      - /dev/spidev1.0:/dev/spidev1.0
+      - /dev/gpiochip0:/dev/gpiochip0
+    cap_add:
+      - SYS_RAWIO
+    volumes:
+      - flight-data:/opt/acc/data
+      - flight-logs:/var/log/airos
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    depends_on:
+      airos-video:
+        condition: service_healthy
+
+  airos-manager:
+    image: airos-manager:${AIROS_MANAGER_VERSION:-latest}
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/airos:/etc/airos
+      - manager-data:/app/data
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+  sightec:
+    image: sightec:v${SIGHTEC_VERSION:-85}
+    runtime: nvidia
+    restart: unless-stopped
+    profiles:
+      - sightec
+    devices:
+      - /dev/ar0234:/dev/ar0234
+    volumes:
+      - /tmp/argus_socket:/tmp/argus_socket
+    network_mode: host
+    depends_on:
+      airos-video:
+        condition: service_healthy
+
+volumes:
+  flight-data:
+  flight-logs:
+  manager-data:
