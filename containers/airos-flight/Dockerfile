@@ -33,6 +33,7 @@ FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS acc-builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
+        openssh-client \
         build-essential \
         cmake \
         ninja-build \
@@ -42,12 +43,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         pybind11-dev \
         libprotobuf-dev \
         protobuf-compiler \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
 ARG ACC_VERSION=v1.5.2
-ARG ACC_REPO=https://github.com/Airolit/Airolit_Component_Controller.git
+ARG ACC_REPO=git@github.com:Airolit/Airolit_Component_Controller.git
 
-RUN git clone ${ACC_REPO} /opt/acc \
+RUN --mount=type=ssh git clone ${ACC_REPO} /opt/acc \
     && cd /opt/acc \
     && git checkout ${ACC_VERSION} \
     && git submodule update --recursive --init
@@ -90,13 +92,15 @@ FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS nmea-builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
+        openssh-client \
         python3 \
         python3-venv \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
 ARG NMEA_VERSION=v0.6.4
 
-RUN git clone https://github.com/Airolit/nmea_over_udp.git /opt/nmea \
+RUN --mount=type=ssh git clone git@github.com:Airolit/nmea_over_udp.git /opt/nmea \
     && cd /opt/nmea \
     && git checkout ${NMEA_VERSION} \
     && python3 -m venv .venv \
@@ -112,13 +116,15 @@ FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS mavlink-logger-builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
+        openssh-client \
         python3 \
         python3-venv \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
 ARG MAVLINK_LOGGER_VERSION=master
 
-RUN git clone https://github.com/Airolit/mavlink_logger.git /opt/mavlink-logger \
+RUN --mount=type=ssh git clone git@github.com:Airolit/mavlink_logger.git /opt/mavlink-logger \
     && cd /opt/mavlink-logger \
     && git checkout ${MAVLINK_LOGGER_VERSION} \
     && python3 -m venv .venv \
@@ -134,13 +140,15 @@ FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS mavlink-sender-builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
+        openssh-client \
         python3 \
         python3-venv \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p -m 0700 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
 ARG MAVLINK_SENDER_VERSION=master
 
-RUN git clone https://github.com/Airolit/mavlink_sender.git /opt/mavlink-sender \
+RUN --mount=type=ssh git clone git@github.com:Airolit/mavlink_sender.git /opt/mavlink-sender \
     && cd /opt/mavlink-sender \
     && git checkout ${MAVLINK_SENDER_VERSION} \
     && python3 -m venv .venv \

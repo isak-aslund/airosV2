@@ -55,7 +55,7 @@ setup-buildx:
 # into the local daemon via --load.
 # --------------------------------------------------------------------------
 
-BUILDX_CMD = docker buildx build --platform $(PLATFORM) --builder airos-builder
+BUILDX_CMD = docker buildx build --platform $(PLATFORM) --builder airos-builder --ssh default
 
 build-video: out
 	$(BUILDX_CMD) \
