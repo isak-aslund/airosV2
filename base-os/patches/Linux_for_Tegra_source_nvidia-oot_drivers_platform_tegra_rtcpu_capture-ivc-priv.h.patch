@@ -1,0 +1,12 @@
+diff --git a/Linux_for_Tegra/source/nvidia-oot/drivers/platform/tegra/rtcpu/capture-ivc-priv.h b/Linux_for_Tegra/source/nvidia-oot/drivers/platform/tegra/rtcpu/capture-ivc-priv.h
+index e503f0af2..2c9b830f4 100644
+--- a/Linux_for_Tegra/source/nvidia-oot/drivers/platform/tegra/rtcpu/capture-ivc-priv.h
++++ b/Linux_for_Tegra/source/nvidia-oot/drivers/platform/tegra/rtcpu/capture-ivc-priv.h
+@@ -26,6 +26,7 @@ struct tegra_capture_ivc_cb_ctx {
+ 	tegra_capture_ivc_cb_func cb_func;
+ 	/** Private context of a VI/ISP capture context */
+ 	const void *priv_context;
++	struct semaphore sem_ch;
+ };
+
+ /**

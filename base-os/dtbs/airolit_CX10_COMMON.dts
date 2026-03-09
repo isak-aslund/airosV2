@@ -1,0 +1,286 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Airolit CX10 - Common Camera Platform Base
+ *
+ * This overlay defines the common camera infrastructure shared by all cameras.
+ * It MUST be loaded FIRST before any camera-specific overlays.
+ *
+ * Provides:
+ *   - GPIO controller with hogs for CAM0_PWDN and CAM1_PWDN
+ *   - I2C multiplexer structure (2 channels for CAM0/CAM1)
+ *   - Camera platform base (2 disabled modules)
+ *   - VI base (2 disabled ports: port0, port1)
+ *   - NVCSI base (2 disabled channels: channel0, channel1)
+ *
+ * Physical mapping:
+ *   CAM0 → CSI channel0 → VI port0 → module0 → video0
+ *   CAM1 → CSI channel1 → VI port1 → module1 → video1
+ *
+ * Camera-specific overlays will then activate their respective channels/modules.
+ *
+ * Usage in extlinux.conf:
+ *   OVERLAYS /boot/airolit_CX10_COMMON.dtbo,/boot/airolit_CX10_AR0234.dtbo,...
+ */
+
+/dts-v1/;
+/plugin/;
+
+#define CAM0_PWDN    TEGRA234_MAIN_GPIO(H, 6)
+#define CAM1_PWDN    TEGRA234_MAIN_GPIO(AC, 0)
+#define CAM_I2C_MUX  TEGRA234_AON_GPIO(CC, 3)
+
+#include <dt-bindings/clock/tegra234-clock.h>
+#include <dt-bindings/gpio/tegra234-gpio.h>
+#include <dt-bindings/tegra234-p3767-0000-common.h>
+
+/ {
+    overlay-name = "Airolit CX10 Common Camera Base";
+    jetson-header-name = "Jetson 24pin CSI Connector";
+    compatible = JETSON_COMPATIBLE_P3768;
+
+    // ========================================================================
+    // FRAGMENT 0: Camera Platform and VI Base Configuration
+    // ========================================================================
+    fragment@0 {
+        target-path = "/";
+        __overlay__ {
+
+            tegra_camera_platform: tegra-camera-platform {
+                compatible = "nvidia, tegra-camera-platform";
+				/**
+				* Physical settings to calculate max ISO BW
+				*
+				* num_csi_lanes = <>;
+				* Total number of CSI lanes when all cameras are active
+				*
+				* max_lane_speed = <>;
+				* Max lane speed in Kbit/s
+				*
+				* min_bits_per_pixel = <>;
+				* Min bits per pixel
+				*
+				* vi_peak_byte_per_pixel = <>;
+				* Max byte per pixel for the VI ISO case
+				*
+				* vi_bw_margin_pct = <>;
+				* Vi bandwidth margin in percentage
+				*
+				* max_pixel_rate = <>;
+				* Max pixel rate in Kpixel/s for the ISP ISO case
+				*
+				* isp_peak_byte_per_pixel = <>;
+				* Max byte per pixel for the ISP ISO case
+				*
+				* isp_bw_margin_pct = <>;
+				* Isp bandwidth margin in percentage
+				*/
+
+                /* Consolidated nominal platform wide parameters; per-sensor overrides live in sensor nodes */
+                /* Use inclusive upper bound to satisfy worst-case overlay (ECON requested 16 lanes) */
+                num_csi_lanes = <4>;             /* Aggregate potential lanes across all connected modules */
+                max_lane_speed = <1500000>;        /* kbit/s per lane */
+                min_bits_per_pixel = <16>;         /* Minimum bpp among sensors */
+                vi_peak_byte_per_pixel = <2>;       /* Worst case bytes/pixel into VI */
+                vi_bw_margin_pct = <25>;            /* Safety margin percent */
+                max_pixel_rate = <240000>;          /* Kpixel/s budget (tuned later if needed) */
+                isp_peak_byte_per_pixel = <5>;      /* Worst case bytes/pixel ISP */
+                isp_bw_margin_pct = <25>;           /* Safety margin percent ISP */
+
+                modules {
+                    status = "okay";
+
+                    sensor_module0: module0 {
+                        status = "disabled";
+                        position = "rear";
+                        orientation = "0";
+                        drivernode0 {
+                            status = "disabled";
+                            pcl_id = "v4l2_sensor";
+                        };
+                    };
+
+                    sensor_module1: module1 {
+                        status = "disabled";
+                        position = "front";
+                        orientation = "1";
+                        drivernode0 {
+                            status = "disabled";
+                            pcl_id = "v4l2_sensor";
+                        };
+                    };
+                };
+            };
+
+            tegra-capture-vi {
+                num-channels = <2>;
+                ports {
+                    #address-cells = <1>;
+                    #size-cells = <0>;
+                    status = "okay";
+
+                    /* CAM0 → VI port 0 */
+                    sensor_vi_port0: port@0 {
+                        reg = <0>;
+                        status = "disabled";
+                        sensor_vi_in0: endpoint {
+                            status = "disabled";
+                            vc-id = <0>;
+                            port-index = <1>;
+                            bus-width = <2>;
+                            remote-endpoint = <&sensor_csi_ch0_out>;
+                        };
+                    };
+
+                    /* CAM1 → VI port 1 */
+                    sensor_vi_port1: port@1 {
+                        reg = <1>;
+                        status = "disabled";
+                        sensor_vi_in1: endpoint {
+                            status = "disabled";
+                            vc-id = <0>;
+                            port-index = <2>;
+                            bus-width = <2>;
+                            remote-endpoint = <&sensor_csi_ch1_out>;
+                        };
+                    };
+                };
+            };
+        };
+    };
+
+    // ========================================================================
+    // FRAGMENT 1: NVCSI Base, GPIO Controller, and I2C Mux
+    // ========================================================================
+    fragment@1 {
+        target-path = "/bus@0";
+        __overlay__ {
+
+            host1x@13e00000 {
+                nvcsi@15a00000 {
+                    num-channels = <2>;
+                    #address-cells = <1>;
+                    #size-cells = <0>;
+
+                    /* CAM0 → CSI channel 0 */
+                    sensor_csi_ch0: channel@0 {
+                        reg = <0>;
+                        status = "disabled";
+                        ports {
+                            #address-cells = <1>;
+                            #size-cells = <0>;
+                            status = "disabled";
+                            sensor_csi_ch0_port0: port@0 {
+                                reg = <0>;
+                                status = "disabled";
+                                sensor_csi_ch0_in: endpoint@0 {
+                                    status = "disabled";
+                                    port-index = <1>;
+                                    bus-width = <2>;
+                                };
+                            };
+                            sensor_csi_ch0_port1: port@1 {
+                                reg = <1>;
+                                status = "disabled";
+                                sensor_csi_ch0_out: endpoint@1 {
+                                    status = "disabled";
+                                    remote-endpoint = <&sensor_vi_in0>;
+                                };
+                            };
+                        };
+                    };
+
+                    /* CAM1 → CSI channel 1 */
+                    sensor_csi_ch1: channel@1 {
+                        reg = <1>;
+                        status = "disabled";
+                        ports {
+                            #address-cells = <1>;
+                            #size-cells = <0>;
+                            status = "disabled";
+                            sensor_csi_ch1_port0: port@0 {
+                                reg = <0>;
+                                status = "disabled";
+                                sensor_csi_ch1_in: endpoint@2 {
+                                    status = "disabled";
+                                    port-index = <2>;
+                                    bus-width = <2>;
+                                };
+                            };
+                            sensor_csi_ch1_port1: port@1 {
+                                reg = <1>;
+                                status = "disabled";
+                                sensor_csi_ch1_out: endpoint@3 {
+                                    status = "disabled";
+                                    remote-endpoint = <&sensor_vi_in1>;
+                                };
+                            };
+                        };
+                    };
+                };
+
+                /* VI DMA configuration */
+                vi0@15c00000 {
+                    dma-noncoherent;
+                };
+
+                vi0-thi@15f00000 {
+                    dma-noncoherent;
+                };
+
+                vi1@14c00000 {
+                    dma-noncoherent;
+                };
+
+                vi1-thi@14f00000 {
+                    dma-noncoherent;
+                };
+            };
+
+            // ================================================================
+            // GPIO CONTROLLER: Main Jetson GPIOs
+            // CRITICAL: Only defined HERE to avoid conflicts!
+            // ================================================================
+            gpio@2200000 {
+                camera-control-output-low {
+                    gpio-hog;
+                    output-low;
+                    gpios = <CAM0_PWDN 0 CAM1_PWDN 0>;
+                    label = "cam0-pwdn", "cam1-pwdn";
+                };
+            };
+
+            // ================================================================
+            // I2C MULTIPLEXER: Structure definition
+            // ================================================================
+            cam_i2cmux: cam_i2cmux {
+                status = "okay";
+                compatible = "i2c-mux-gpio";
+                #address-cells = <1>;
+                #size-cells = <0>;
+                mux-gpios = <&gpio_aon CAM_I2C_MUX GPIO_ACTIVE_HIGH>;
+                i2c-parent = <&cam_i2c>;
+            };
+        };
+    };
+
+    fragment@2 {
+        target = <&cam_i2cmux>;
+        __overlay__ {
+            /* I2C channel 0 for CAM0 */
+            cam_i2cmux_i2c0: i2c@0 {
+                status = "disabled";
+                reg = <0>;
+                #address-cells = <1>;
+                #size-cells = <0>;
+            };
+
+            /* I2C channel 1 for CAM1 */
+            cam_i2cmux_i2c1: i2c@1 {
+                status = "disabled";
+                reg = <1>;
+                #address-cells = <1>;
+                #size-cells = <0>;
+            };
+        };
+    };
+};

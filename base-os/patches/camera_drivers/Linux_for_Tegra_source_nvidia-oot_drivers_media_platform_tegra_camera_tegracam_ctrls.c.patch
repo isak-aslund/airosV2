@@ -1,0 +1,18 @@
+diff --git a/Linux_for_Tegra/source/nvidia-oot/drivers/media/platform/tegra/camera/tegracam_ctrls.c b/Linux_for_Tegra/source/nvidia-oot/drivers/media/platform/tegra/camera/tegracam_ctrls.c
+index 240daa9a7..45901e465 100644
+--- a/Linux_for_Tegra/source/nvidia-oot/drivers/media/platform/tegra/camera/tegracam_ctrls.c
++++ b/Linux_for_Tegra/source/nvidia-oot/drivers/media/platform/tegra/camera/tegracam_ctrls.c
+@@ -315,11 +315,11 @@ static int tegracam_set_ctrls(struct tegracam_ctrl_handler *handler,
+ 		dev_err(s_data->dev, "power status query unsupported\n");
+ 		return -ENOTTY;
+ 	}
+-
++#ifndef CONFIG_VIDEO_ECAM
+ 	/* power state is turned off, do not program sensor now */
+ 	if (!status)
+ 		return 0;
+-
++#endif
+ 	ctrlprops =
+ 		&s_data->sensor_props.sensor_modes[0].control_properties;
+

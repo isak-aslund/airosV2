@@ -1,0 +1,95 @@
+From e5fc7545051affb353ea9ff793a912164736dfe7 Mon Sep 17 00:00:00 2001
+From: Airolit Builder <airolit@airolit.com>
+Date: Mon, 10 Nov 2025 16:04:18 +0100
+Subject: [PATCH] AirOS: Add NULL-ops guards for legacy camera drivers
+
+- Guard sensor_ops->check_unsupported_mode in camera_common_try_fmt
+- Guard sensor_ops->after_set_pixel_format in camera_common_s_fmt
+- Add one-time warning flag to prevent log spam
+- Fixes NULL pointer dereference with ECON AR0234 MCU-based driver
+---
+ .../platform/tegra/camera/camera_common.c     | 54 ++++++++++++++-----
+ 1 file changed, 42 insertions(+), 12 deletions(-)
+
+diff --git a/source/nvidia-oot/drivers/media/platform/tegra/camera/camera_common.c b/source/nvidia-oot/drivers/media/platform/tegra/camera/camera_common.c
+index 11aea0d..ed70ee1 100644
+--- a/source/nvidia-oot/drivers/media/platform/tegra/camera/camera_common.c
++++ b/source/nvidia-oot/drivers/media/platform/tegra/camera/camera_common.c
+@@ -27,6 +27,12 @@
+ #include <linux/arm64-barrier.h>
+ #include <linux/nospec.h>
+
++/*
++ * Added by AirOS patch: guard NULL sensor_ops usage for legacy / MCU based
++ * drivers (e.g. ECON AR0234) that set s_data->ops = NULL intentionally.
++ */
++static bool camera_common_ops_null_warned; /* one-time warning flag */
++
+ #define has_s_op(master, op) \
+ 	(master->ops && master->ops->op)
+ #define call_s_op(master, op) \
+@@ -676,12 +682,23 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
+ 	if (!camera_common_verify_code(chan, mf->code))
+ 		err = -EINVAL;
+
+-	if (sensor_ops->check_unsupported_mode){
+-	    err = sensor_ops->check_unsupported_mode(s_data, mf);
+-	    if (err) {
+-		    dev_err(sd->dev, "Error checking unsupported mode\n");
+-		    return err;
+-	    }
++	/* Guard legacy drivers without sensor_ops implementation */
++	if (sensor_ops && sensor_ops->check_unsupported_mode) {
++		err = sensor_ops->check_unsupported_mode(s_data, mf);
++		if (err) {
++			dev_err(sd->dev, "Error checking unsupported mode\n");
++			return err;
++		}
++	} else if (!sensor_ops) {
++		/* Print warning only once to avoid log spam */
++		if (!camera_common_ops_null_warned) {
++			camera_common_ops_null_warned = true;
++			dev_warn(sd->dev,
++				"camera_common: ops NULL; skipping unsupported-mode check (legacy driver)\n");
++		}
++	} else if (!sensor_ops->check_unsupported_mode) {
++		dev_dbg(sd->dev,
++			"camera_common: sensor_ops present but check_unsupported_mode not implemented\n");
+ 	}
+
+ verify_code:
+@@ -715,12 +732,25 @@ int camera_common_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
+
+ 	s_data->colorfmt = camera_common_find_datafmt(mf->code);
+
+-	if (sensor_ops->after_set_pixel_format && ret == 0){
+-	    ret = sensor_ops->after_set_pixel_format(s_data);
+-	    if (ret) {
+-		    dev_err(sd->dev, "Error getting current pixel format\n");
+-		    return ret;
+-	    }
++
++	/* Guard after_set_pixel_format hook */
++	if (ret == 0) {
++		if (sensor_ops && sensor_ops->after_set_pixel_format) {
++			ret = sensor_ops->after_set_pixel_format(s_data);
++			if (ret) {
++				dev_err(sd->dev, "Error running after_set_pixel_format hook\n");
++				return ret;
++			}
++		} else if (!sensor_ops) {
++			if (!camera_common_ops_null_warned) {
++				camera_common_ops_null_warned = true;
++				dev_warn(sd->dev,
++					"camera_common: ops NULL; skipping after_set_pixel_format hook (legacy driver)\n");
++			}
++		} else if (!sensor_ops->after_set_pixel_format) {
++			dev_dbg(sd->dev,
++				"camera_common: sensor_ops present but after_set_pixel_format not implemented\n");
++		}
+ 	}
+
+ 	return ret;
+--
+2.39.5
+

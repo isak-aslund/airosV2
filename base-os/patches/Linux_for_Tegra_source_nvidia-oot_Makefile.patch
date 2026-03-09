@@ -1,0 +1,15 @@
+diff --git a/Linux_for_Tegra/source/nvidia-oot/Makefile b/Linux_for_Tegra/source/nvidia-oot/Makefile
+index de4f6b10f..e74e4398b 100644
+--- a/Linux_for_Tegra/source/nvidia-oot/Makefile
++++ b/Linux_for_Tegra/source/nvidia-oot/Makefile
+@@ -11,6 +11,10 @@ ifeq ($(CONFIG_TEGRA_VIRTUALIZATION),y)
+ subdir-ccflags-y += -DCONFIG_TEGRA_VIRTUALIZATION
+ endif
+
++ifeq ($(CONFIG_VIDEO_ECAM),y)
++subdir-ccflags-y += -DCONFIG_VIDEO_ECAM
++endif
++
+ ifeq ($(CONFIG_TEGRA_SYSTEM_TYPE_ACK),y)
+ subdir-ccflags-y += -DCONFIG_TEGRA_SYSTEM_TYPE_ACK
+ subdir-ccflags-y += -Wno-sometimes-uninitialized

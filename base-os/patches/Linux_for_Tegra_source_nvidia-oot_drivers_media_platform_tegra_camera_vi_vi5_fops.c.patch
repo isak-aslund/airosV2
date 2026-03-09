@@ -1,0 +1,131 @@
+diff --git a/Linux_for_Tegra/source/nvidia-oot/drivers/media/platform/tegra/camera/vi/vi5_fops.c b/Linux_for_Tegra/source/nvidia-oot/drivers/media/platform/tegra/camera/vi/vi5_fops.c
+index c6093a759..73ce14f1e 100644
+--- a/Linux_for_Tegra/source/nvidia-oot/drivers/media/platform/tegra/camera/vi/vi5_fops.c
++++ b/Linux_for_Tegra/source/nvidia-oot/drivers/media/platform/tegra/camera/vi/vi5_fops.c
+@@ -41,6 +41,24 @@
+
+ #define CAPTURE_TIMEOUT_MS	2500
+
++#ifdef CONFIG_VIDEO_ECAM
++/* For Econ stream monitor wait Queue */
++
++#define ECON_MAX_CAM		8
++#define ECON_NUM_OF_ERR_CNT	5
++#define DEV_NAME_CHAR_SKIP 	11
++#define DEV_NAME_CHAR 		17
++
++wait_queue_head_t econ_err_hand_q;
++int econ_frame_err_track = 0;
++int econ_num_uncorr_err[ECON_MAX_CAM];
++char econ_dev_name[32];
++char econ_err_dev_name[32];
++int econ_stream_monitor = 0;
++int vi5_err_cam_num = 0;
++static uint8_t check_queue_init = 0;
++#endif
++
+ static const struct vi_capture_setup default_setup = {
+ 	.channel_flags = 0
+ 	| CAPTURE_CHANNEL_FLAG_VIDEO
+@@ -157,6 +175,7 @@ static const struct v4l2_ctrl_ops vi5_ctrl_ops = {
+ };
+
+ static const struct v4l2_ctrl_config vi5_custom_ctrls[] = {
++#ifndef CONFIG_VIDEO_ECAM
+ 	{
+ 		.ops = &vi5_ctrl_ops,
+ 		.id = TEGRA_CAMERA_CID_WRITE_ISPFORMAT,
+@@ -209,6 +228,7 @@ static const struct v4l2_ctrl_config vi5_custom_ctrls[] = {
+ 		.step = 1,
+ 		.dims = { SENSOR_CTRL_BLOB_SIZE },
+ 	},
++#endif
+ 	{
+ 		.ops = &vi5_ctrl_ops,
+ 		.id = TEGRA_CAMERA_CID_VI_CAPTURE_TIMEOUT,
+@@ -289,6 +309,15 @@ static int vi5_channel_setup_queue(struct tegra_channel *chan,
+ {
+ 	int ret = 0;
+
++#ifdef CONFIG_VIDEO_ECAM
++    /* Initialize Econ wait queue */
++	if(check_queue_init == 0){
++		init_waitqueue_head(&econ_err_hand_q);
++		printk("Initialized E-con wait queue\n");
++		check_queue_init = 1;
++	}
++#endif
++
+ 	*nbuffers = clamp(*nbuffers, CAPTURE_MIN_BUFFERS, CAPTURE_MAX_BUFFERS);
+
+ 	ret = tegra_channel_alloc_buffer_queue(chan, *nbuffers);
+@@ -586,6 +615,18 @@ static void vi5_capture_dequeue(struct tegra_channel *chan,
+ 		buf->vb2_state = VB2_BUF_STATE_ERROR;
+ 	else
+ 		buf->vb2_state = VB2_BUF_STATE_DONE;
++
++#ifdef CONFIG_VIDEO_ECAM
++	if(econ_num_uncorr_err[chan->video->num])
++	{
++		memcpy(econ_err_dev_name,
++			chan->video->name + DEV_NAME_CHAR_SKIP, DEV_NAME_CHAR);
++		if(!strcmp(econ_err_dev_name,econ_dev_name))
++		{
++			econ_num_uncorr_err[chan->video->num] = 0;
++		}
++	}
++#endif
+ 	/* Read EOF from capture descriptor */
+ 	ts = ns_to_timespec64((s64)descr->status.eof_timestamp);
+ 	trace_tegra_channel_capture_frame("eof", &ts);
+@@ -593,6 +634,33 @@ static void vi5_capture_dequeue(struct tegra_channel *chan,
+ 	goto rel_buf;
+
+ uncorr_err:
++#ifdef CONFIG_VIDEO_ECAM
++	if(econ_stream_monitor)
++	{
++		/* Monitor and Set Streaming monitor flags for ECON cam */
++		printk("video device id=%d \n", chan->video->num);
++		printk("video device name=%s \n", chan->video->name);
++		if(!econ_frame_err_track)
++		{
++			memcpy(econ_dev_name,
++				chan->video->name + DEV_NAME_CHAR_SKIP, DEV_NAME_CHAR);
++		}
++
++		econ_num_uncorr_err[chan->video->num] = econ_num_uncorr_err[chan->video->num] + 1;
++		printk("CAM-%d Uncorr_ERR_Occured %d Times\n",chan->video->num, econ_num_uncorr_err[chan->video->num]);
++		if(econ_num_uncorr_err[chan->video->num] > ECON_NUM_OF_ERR_CNT && econ_frame_err_track == 0){
++			econ_frame_err_track = 1;
++			vi5_err_cam_num = chan->video->num;
++			econ_num_uncorr_err[chan->video->num] = 0;
++			printk("setting econ_frame_err_track\n");
++			wake_up_interruptible(&econ_err_hand_q);
++		}
++	}
++
++	while(econ_frame_err_track && econ_stream_monitor){
++		msleep(1);
++	}
++#endif
+ 	spin_lock_irqsave(&chan->capture_state_lock, flags);
+ 	chan->capture_state = CAPTURE_ERROR;
+ 	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
+@@ -603,6 +671,16 @@ rel_buf:
+ 	vi5_release_buffer(chan, buf);
+ }
+
++#ifdef CONFIG_VIDEO_ECAM
++/* Export the symbols to use in Sensor driver */
++EXPORT_SYMBOL(econ_dev_name);
++EXPORT_SYMBOL(econ_err_hand_q);
++EXPORT_SYMBOL(econ_num_uncorr_err);
++EXPORT_SYMBOL(vi5_err_cam_num);
++EXPORT_SYMBOL(econ_frame_err_track);
++EXPORT_SYMBOL(econ_stream_monitor);
++#endif
++
+ static int vi5_channel_error_recover(struct tegra_channel *chan,
+ 	bool queue_error)
+ {

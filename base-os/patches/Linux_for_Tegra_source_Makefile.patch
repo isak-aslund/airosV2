@@ -1,0 +1,66 @@
+diff --git a/Linux_for_Tegra/source/Makefile b/Linux_for_Tegra/source/Makefile
+index ad7dc0704..6b10da622 100644
+--- a/Linux_for_Tegra/source/Makefile
++++ b/Linux_for_Tegra/source/Makefile
+@@ -30,11 +30,10 @@ help:
+ 	@echo   "   make clean            # to make clean driver sources"
+ 	@echo   "================================================================================"
+
+-modules: hwpm nvidia-oot nvgpu nvidia-display
++modules: hwpm nvidia-oot nvgpu nvidia-display sensor-driver
+ dtbs: nvidia-dtbs
+-modules_install: hwpm nvidia-oot nvgpu nvidia-display-install
+-clean: hwpm nvidia-oot nvgpu nvidia-display-clean nvidia-dtbs-clean
+-
++modules_install: hwpm nvidia-oot nvgpu nvidia-display-install sensor-driver
++clean: hwpm nvidia-oot nvgpu sensor-driver nvidia-display-clean nvidia-dtbs-clean
+
+ conftest:
+ ifeq ($(MAKECMDGOALS), modules)
+@@ -79,6 +78,7 @@ nvidia-oot: conftest hwpm
+ 		-C $(KERNEL_OUTPUT) \
+ 		M=$(MAKEFILE_DIR)/nvidia-oot \
+ 		CONFIG_TEGRA_OOT_MODULE=m \
++		CONFIG_VIDEO_ECAM=y \
+ 		srctree.nvidia-oot=$(MAKEFILE_DIR)/nvidia-oot \
+ 		srctree.hwpm=$(MAKEFILE_DIR)/hwpm \
+ 		srctree.nvconftest=$(NVIDIA_CONFTEST) \
+@@ -191,3 +191,38 @@ nvidia-dtbs-clean:
+ 	@echo   "================================================================================"
+ 	rm -fr $(MAKEFILE_DIR)/kernel-devicetree/generic-dts/dtbs
+
++
++sensor-driver:
++	@if [ ! -d "$(MAKEFILE_DIR)/sensor_driver/e-CAM25_CUONX" ] && [ ! -d "$(MAKEFILE_DIR)/sensor_driver/e-CAM86_CUONX" ]; then \
++        echo "No sensor_driver directories found, exiting.."; \
++        false; \
++    fi
++	@echo "================================================================================"
++	@echo "make $(MAKECMDGOALS) - sensor drivers ..."
++	@echo "================================================================================"
++	@if [ -d "$(MAKEFILE_DIR)/sensor_driver/PWM_MCU" ]; then \
++        $(MAKE) -j $(NPROC) ARCH=arm64 \
++            CROSS_COMPILE=$(CROSS_COMPILE) \
++            -C $(NVIDIA_HEADERS) \
++            M=$(MAKEFILE_DIR)/sensor_driver/PWM_MCU \
++            srctree.nvconftest=$(NVIDIA_CONFTEST) \
++            $(MAKECMDGOALS); \
++	fi
++	@if [ -d "$(MAKEFILE_DIR)/sensor_driver/e-CAM25_CUONX" ]; then \
++        $(MAKE) -j $(NPROC) ARCH=arm64 \
++            CROSS_COMPILE=$(CROSS_COMPILE) \
++            -C $(NVIDIA_HEADERS) \
++            M=$(MAKEFILE_DIR)/sensor_driver/e-CAM25_CUONX \
++            KBUILD_EXTRA_SYMBOLS=$(MAKEFILE_DIR)/sensor_driver/PWM_MCU/Module.symvers \
++            srctree.nvconftest=$(NVIDIA_CONFTEST) \
++            $(MAKECMDGOALS); \
++	fi
++	@if [ -d "$(MAKEFILE_DIR)/sensor_driver/e-CAM86_CUONX" ]; then \
++        $(MAKE) -j $(NPROC) ARCH=arm64 \
++            CROSS_COMPILE=$(CROSS_COMPILE) \
++            -C $(NVIDIA_HEADERS) \
++            M=$(MAKEFILE_DIR)/sensor_driver/e-CAM86_CUONX \
++            KBUILD_EXTRA_SYMBOLS=$(MAKEFILE_DIR)/sensor_driver/PWM_MCU/Module.symvers \
++            srctree.nvconftest=$(NVIDIA_CONFTEST) \
++            $(MAKECMDGOALS); \
++	fi

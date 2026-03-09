@@ -1,0 +1,22 @@
+diff --git a/Linux_for_Tegra/rootfs/boot/extlinux/extlinux.conf b/Linux_for_Tegra/rootfs/boot/extlinux/extlinux.conf
+index 7ffcdfce0..5f6d76e89 100644
+--- a/Linux_for_Tegra/rootfs/boot/extlinux/extlinux.conf
++++ b/Linux_for_Tegra/rootfs/boot/extlinux/extlinux.conf
+@@ -1,5 +1,5 @@
+ TIMEOUT 30
+-DEFAULT primary
++DEFAULT airolit-camera
+
+ MENU TITLE L4T boot options
+
+@@ -28,3 +28,10 @@
+ #    INITRD /boot/initrd
+ #    APPEND ${cbootargs}
+
++LABEL airolit-camera
++      MENU LABEL Airolit Camera Drivers IMX678 + AR0234
++      LINUX /boot/Image
++      FDT /boot/dtb/kernel_tegra234-p3768-0000+p3767-0001-nv.dtb
++      INITRD /boot/initrd
++      APPEND ${cbootargs}
++      OVERLAYS /boot/jetson-io-hdr40-user-custom.dtbo,/boot/airolit_CX10_AR0234_overlay.dtbo,/boot/airolit_CX10_IMX678_overlay.dtbo
