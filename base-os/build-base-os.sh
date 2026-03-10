@@ -566,15 +566,28 @@ mkdir -p "$OUT_DIR"
 
 # Ensure chroot mounts are fully cleaned before archiving
 cleanup_chroot_mounts
+# Force-unmount anything still mounted under rootfs (Phase 3/4 chroot calls may remount)
+for mnt in "$L4T_ROOTFS/proc" "$L4T_ROOTFS/sys" "$L4T_ROOTFS/dev/pts" "$L4T_ROOTFS/dev" "$L4T_ROOTFS/run"; do
+    umount -lf "$mnt" 2>/dev/null || true
+done
 
 OUTFILE="$OUT_DIR/airos-base-${AirOS_VERSION_SAFE}_$(date +%Y%m%d_%H%M).tar.gz"
+# Clean virtual filesystem dirs but preserve essential structure
+for vfs in proc sys; do
+    rm -rf "$L4T_ROOTFS/$vfs"
+    mkdir -p "$L4T_ROOTFS/$vfs"
+done
+# dev needs console and null for init
+rm -rf "$L4T_ROOTFS/dev"
+mkdir -p "$L4T_ROOTFS/dev"
+# run needs lock/ dir (/var/lock -> /run/lock, used by flash and systemd)
+rm -rf "$L4T_ROOTFS/run"
+mkdir -p "$L4T_ROOTFS/run/lock"
+
 tar --exclude='./source' \
     --exclude='./nv_tools' \
     --exclude='./generate_capsule' \
-    --exclude='./rootfs/proc/*' \
-    --exclude='./rootfs/sys/*' \
-    --exclude='./rootfs/dev/*' \
-    --exclude='./rootfs/run/*' \
+    --warning=no-file-changed \
     -C "$L4T_DIR" -cf - . | pigz -p "$(nproc)" > "$OUTFILE"
 
 log_info "Base OS image exported to: $OUTFILE"
