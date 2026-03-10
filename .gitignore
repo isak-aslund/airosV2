@@ -7,6 +7,9 @@ out/
 *.tar.gz
 *.tar
 
+# Exception: camera driver packages needed for base-os build
+!base-os/camera_drivers/*.tar.gz
+
 # Docker
 .docker/
 
