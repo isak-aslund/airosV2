@@ -3,16 +3,14 @@ services:
     image: airos-video:${AIROS_VIDEO_VERSION:-latest}
     runtime: nvidia
     restart: unless-stopped
-    environment:
-      - ENABLE_AR0234=${ENABLE_AR0234:-true}
     devices:
-      - /dev/ar0234:/dev/ar0234
+      - /dev/video10:/dev/video10
       - /dev/imx678_econ:/dev/imx678_econ
     volumes:
       - /tmp/argus_socket:/tmp/argus_socket
     network_mode: host
     healthcheck:
-      test: ["CMD", "sh", "-c", "wget -qO- http://localhost:9997/v3/paths/list || exit 1"]
+      test: ["CMD", "sh", "-c", "wget -qO- http://localhost:9997/v3/paths/get/dfv | grep -q ready..true && wget -qO- http://localhost:9997/v3/paths/get/fpv | grep -q ready..true"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -63,13 +61,10 @@ services:
     profiles:
       - sightec
     devices:
-      - /dev/ar0234:/dev/ar0234
+      - /dev/video11:/dev/video0
     volumes:
       - /tmp/argus_socket:/tmp/argus_socket
     network_mode: host
-    depends_on:
-      airos-video:
-        condition: service_healthy
 
 volumes:
   flight-data:

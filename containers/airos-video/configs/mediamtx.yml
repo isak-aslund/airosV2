@@ -8,7 +8,15 @@ protocols: [udp, tcp]
 rtspAddress: :8554
 
 paths:
-  live0:
-    source: publisher
+  dfv:
+    runOnInit: >-
+      gst-launch-1.0
+      v4l2src device=/dev/video10
+      ! "video/x-raw, format=(string)UYVY, width=(int)1920, height=(int)1080"
+      ! nvvidconv
+      ! "video/x-raw(memory:NVMM), format=(string)I420, width=(int)1920, height=(int)1080"
+      ! nvv4l2h264enc
+      ! rtspclientsink location=rtsp://localhost:8554/dfv
+    runOnInitRestart: yes
   fpv:
     source: publisher

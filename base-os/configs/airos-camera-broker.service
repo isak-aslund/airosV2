@@ -1,0 +1,20 @@
+[Unit]
+Description=AirOS AR0234 Camera Broker
+After=systemd-modules-load.service dev-ar0234.device
+Wants=dev-ar0234.device
+ConditionPathExists=/dev/ar0234
+
+[Service]
+Type=simple
+ExecStartPre=/bin/bash -c 'timeout 15 sh -c "until [ -e /dev/video10 ] && [ -e /dev/video11 ]; do sleep 0.5; done"'
+ExecStart=/usr/bin/gst-launch-1.0 \
+    v4l2src device=/dev/ar0234 \
+    ! "video/x-raw, format=(string)UYVY, width=(int)1920, height=(int)1080" \
+    ! tee name=t \
+    t. ! queue leaky=upstream max-size-buffers=2 ! v4l2sink device=/dev/video10 \
+    t. ! queue leaky=upstream max-size-buffers=2 ! v4l2sink device=/dev/video11
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

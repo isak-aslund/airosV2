@@ -1,8 +1,8 @@
 [Unit]
 Description=AirOS Docker Compose Stack
 Requires=docker.service
-After=docker.service network-online.target nvargus-daemon.service
-Wants=network-online.target
+After=docker.service network-online.target nvargus-daemon.service airos-camera-broker.service
+Wants=network-online.target airos-camera-broker.service
 
 [Service]
 Type=oneshot

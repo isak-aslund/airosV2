@@ -1,27 +1,4 @@
 #!/bin/bash
-set -euo pipefail
-
-# If AR0234 is disabled, sleep forever to keep s6 happy
-if [ "${ENABLE_AR0234}" != "true" ]; then
-    exec sleep infinity
-fi
-
-# Wait for the device node to appear (up to 30 s)
-timeout=30
-elapsed=0
-while [ ! -e /dev/ar0234 ]; do
-    if [ "$elapsed" -ge "$timeout" ]; then
-        echo "ar0234-stream: /dev/ar0234 not found after ${timeout}s" >&2
-        exit 1
-    fi
-    sleep 1
-    elapsed=$((elapsed + 1))
-done
-
-exec gst-launch-1.0 \
-    v4l2src device=/dev/ar0234 \
-    ! "video/x-raw, format=(string)UYVY, width=(int)1920, height=(int)1080" \
-    ! nvvidconv \
-    ! "video/x-raw(memory:NVMM), format=(string)I420, width=(int)1920, height=(int)1080" \
-    ! nvv4l2h264enc \
-    ! rtspclientsink location=rtsp://localhost:8554/live0
+# AR0234 stream is now handled by mediamtx runOnInit (reads from v4l2loopback)
+# This s6 service is kept as a no-op for compatibility
+exec sleep infinity

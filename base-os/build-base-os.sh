@@ -65,6 +65,9 @@ required_files=(
     "$SCRIPT_DIR/configs/journald.conf"
     "$SCRIPT_DIR/configs/70-airolit-cameras.rules"
     "$SCRIPT_DIR/configs/airos-compose.service"
+    "$SCRIPT_DIR/configs/airos-camera-broker.service"
+    "$SCRIPT_DIR/configs/v4l2loopback.conf"
+    "$SCRIPT_DIR/configs/v4l2loopback-load.conf"
     "$SCRIPT_DIR/configs/airos-watchdog.service"
     "$SCRIPT_DIR/configs/airos-watchdog.timer"
     "$SCRIPT_DIR/configs/airos-watchdog.sh"
@@ -309,8 +312,15 @@ cp "$SCRIPT_DIR/configs/daemon.json" "$L4T_ROOTFS/etc/docker/daemon.json"
 # Udev rules for camera symlinks
 cp "$SCRIPT_DIR/configs/70-airolit-cameras.rules" "$L4T_ROOTFS/etc/udev/rules.d/"
 
+# v4l2loopback config (dual loopback for camera broker)
+mkdir -p "$L4T_ROOTFS/etc/modprobe.d"
+cp "$SCRIPT_DIR/configs/v4l2loopback.conf" "$L4T_ROOTFS/etc/modprobe.d/"
+mkdir -p "$L4T_ROOTFS/etc/modules-load.d"
+cp "$SCRIPT_DIR/configs/v4l2loopback-load.conf" "$L4T_ROOTFS/etc/modules-load.d/"
+
 # Systemd services
 cp "$SCRIPT_DIR/configs/airos-compose.service" "$L4T_ROOTFS/etc/systemd/system/"
+cp "$SCRIPT_DIR/configs/airos-camera-broker.service" "$L4T_ROOTFS/etc/systemd/system/"
 cp "$SCRIPT_DIR/configs/airos-watchdog.service" "$L4T_ROOTFS/etc/systemd/system/"
 cp "$SCRIPT_DIR/configs/airos-watchdog.timer" "$L4T_ROOTFS/etc/systemd/system/"
 cp "$SCRIPT_DIR/configs/airos-watchdog.sh" "$L4T_ROOTFS/usr/local/bin/"
@@ -320,6 +330,7 @@ chmod +x "$L4T_ROOTFS/usr/local/bin/airos-watchdog.sh"
 chroot "$L4T_ROOTFS" /bin/bash <<'CHROOT_EOF'
     systemctl enable docker.service
     systemctl enable airos-compose.service
+    systemctl enable airos-camera-broker.service
     systemctl enable airos-watchdog.timer
     # Disable snapd to avoid boot hangs
     systemctl mask snapd.service snapd.socket snapd.seeded.service
@@ -492,13 +503,14 @@ verify_file "$L4T_ROOTFS/etc/airos-base-info"
 # Systemd services
 log_info "Checking systemd services..."
 verify_file "$L4T_ROOTFS/etc/systemd/system/airos-compose.service"
+verify_file "$L4T_ROOTFS/etc/systemd/system/airos-camera-broker.service"
 verify_file "$L4T_ROOTFS/etc/systemd/system/airos-load-images.service"
 verify_file "$L4T_ROOTFS/etc/systemd/system/airos-watchdog.service"
 verify_file "$L4T_ROOTFS/etc/systemd/system/airos-watchdog.timer"
 
 # Service enablement (symlinks)
 log_info "Checking service enablement..."
-for svc in docker.service airos-compose.service airos-load-images.service; do
+for svc in docker.service airos-compose.service airos-camera-broker.service airos-load-images.service; do
     link="$L4T_ROOTFS/etc/systemd/system/multi-user.target.wants/$svc"
     if [ ! -L "$link" ] && [ ! -f "$link" ]; then
         log_error "Service not enabled: $svc"
@@ -511,6 +523,16 @@ done
 # Udev rules
 log_info "Checking udev rules..."
 verify_file "$L4T_ROOTFS/etc/udev/rules.d/70-airolit-cameras.rules"
+
+# v4l2loopback config
+log_info "Checking v4l2loopback config..."
+verify_file "$L4T_ROOTFS/etc/modprobe.d/v4l2loopback.conf"
+if ! grep -q "video_nr=10,11" "$L4T_ROOTFS/etc/modprobe.d/v4l2loopback.conf" 2>/dev/null; then
+    log_error "v4l2loopback.conf missing dual device config (video_nr=10,11)"
+    VERIFY_FAIL=1
+else
+    log_info "  ✅ v4l2loopback dual device config"
+fi
 
 # User
 log_info "Checking user configuration..."
